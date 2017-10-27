@@ -9,7 +9,7 @@ go get github.com/fortnoxab/ginprometheus
 
 
 ## usage example
-```
+```go
 package main
 
 import (
