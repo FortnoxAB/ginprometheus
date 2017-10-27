@@ -1,4 +1,6 @@
 # ginprometheus
+ [![GoDoc](https://godoc.org/github.com/FortnoxAB/ginprometheus?status.svg)](https://godoc.org/github.com/fortnoxab/ginprometheus)
+
 Send gin request metrics to prometheus
 
 
