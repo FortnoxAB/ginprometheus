@@ -29,7 +29,7 @@ func main() {
 	flag.Parse()
 	g := gin.Default()
 
-	m := ginprometheus.New("")
+	m := ginprometheus.New("http")
 	m.Use(g)
 
 	g.GET("/one/:id/", func(c *gin.Context) {

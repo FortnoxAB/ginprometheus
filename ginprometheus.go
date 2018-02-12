@@ -17,7 +17,7 @@ type Prometheus struct {
 	reqCnt               *prometheus.CounterVec
 	reqDur, reqSz, resSz prometheus.Summary
 	ginRouter            *gin.Engine
-	pathMap              map[string]string
+	pathMap              KVStore
 
 	MetricsPath string
 }
@@ -26,7 +26,7 @@ type Prometheus struct {
 func New(subsystem string) *Prometheus {
 	p := &Prometheus{
 		MetricsPath: defaultMetricPath,
-		pathMap:     make(map[string]string),
+		pathMap:     newPathMap(),
 	}
 
 	p.registerMetrics(subsystem)
@@ -93,12 +93,12 @@ func (p *Prometheus) handlerFunc() gin.HandlerFunc {
 		go computeApproximateRequestSize(c.Request, reqSz)
 
 		url := ""
-		if in, ok := p.pathMap[c.HandlerName()]; ok {
+		if in, err := p.pathMap.Get(c.HandlerName()); err == nil {
 			url = in
 		} else {
 			// We miss some routes so let's parse that again
 			for _, r := range p.ginRouter.Routes() {
-				p.pathMap[r.Handler] = r.Path
+				p.pathMap.Set(r.Handler, r.Path)
 				if c.HandlerName() == r.Handler {
 					url = r.Path
 				}

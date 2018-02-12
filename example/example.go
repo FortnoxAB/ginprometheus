@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/fortnoxab/ginprometheus"
-	gin "gopkg.in/gin-gonic/gin.v1"
+	"github.com/gin-gonic/gin"
 )
 
 var addr = flag.String("listen-address", ":8080", "The address to listen on for HTTP requests.")
@@ -15,7 +15,7 @@ func main() {
 	flag.Parse()
 	g := gin.Default()
 
-	m := ginprometheus.New("")
+	m := ginprometheus.New("http")
 	m.Use(g)
 
 	g.GET("/one/:id/", func(c *gin.Context) {
