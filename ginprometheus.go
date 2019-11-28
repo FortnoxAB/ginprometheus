@@ -17,7 +17,6 @@ type Prometheus struct {
 	reqCnt               *prometheus.CounterVec
 	reqDur, reqSz, resSz prometheus.Summary
 	ginRouter            *gin.Engine
-	pathMap              KVStore
 
 	MetricsPath string
 }
@@ -26,7 +25,6 @@ type Prometheus struct {
 func New(subsystem string) *Prometheus {
 	p := &Prometheus{
 		MetricsPath: defaultMetricPath,
-		pathMap:     newPathMap(),
 	}
 
 	p.registerMetrics(subsystem)
@@ -35,7 +33,6 @@ func New(subsystem string) *Prometheus {
 }
 
 func (p *Prometheus) registerMetrics(subsystem string) {
-
 	p.reqCnt = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Subsystem: subsystem,
@@ -72,7 +69,6 @@ func (p *Prometheus) registerMetrics(subsystem string) {
 		},
 	)
 	prometheus.MustRegister(p.resSz)
-
 }
 
 // Use adds the middleware to a gin engine.
@@ -92,19 +88,6 @@ func (p *Prometheus) handlerFunc() gin.HandlerFunc {
 		reqSz := make(chan int64)
 		go computeApproximateRequestSize(c.Request, reqSz)
 
-		url := ""
-		if in, err := p.pathMap.Get(c.HandlerName()); err == nil {
-			url = in
-		} else {
-			// We miss some routes so let's parse that again
-			for _, r := range p.ginRouter.Routes() {
-				p.pathMap.Set(r.Handler, r.Path)
-				if c.HandlerName() == r.Handler {
-					url = r.Path
-				}
-			}
-		}
-
 		start := time.Now()
 
 		c.Next()
@@ -114,7 +97,7 @@ func (p *Prometheus) handlerFunc() gin.HandlerFunc {
 		resSz := float64(c.Writer.Size())
 
 		p.reqDur.Observe(elapsed)
-		p.reqCnt.WithLabelValues(status, c.Request.Method, url).Inc()
+		p.reqCnt.WithLabelValues(status, c.Request.Method, c.FullPath()).Inc()
 		p.reqSz.Observe(float64(<-reqSz))
 		p.resSz.Observe(resSz)
 	}
