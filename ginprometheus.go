@@ -12,16 +12,16 @@ import (
 
 var defaultMetricPath = "/metrics"
 
-// Prometheus contains the metrics gathered by the instance and its web path
+// Prometheus contains the metrics gathered by the instance and its web path.
 type Prometheus struct {
 	reqCnt               *prometheus.CounterVec
-	reqDur, reqSz, resSz prometheus.Summary
+	reqDur, reqSz, resSz *prometheus.SummaryVec
 	ginRouter            *gin.Engine
 
 	MetricsPath string
 }
 
-// New generates a new set of metrics with a certain subsystem name
+// New generates a new set of metrics with a certain subsystem name.
 func New(subsystem string) *Prometheus {
 	p := &Prometheus{
 		MetricsPath: defaultMetricPath,
@@ -43,30 +43,33 @@ func (p *Prometheus) registerMetrics(subsystem string) {
 	)
 	prometheus.MustRegister(p.reqCnt)
 
-	p.reqDur = prometheus.NewSummary(
+	p.reqDur = prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
 			Subsystem: subsystem,
 			Name:      "request_duration_seconds",
 			Help:      "The HTTP request latencies in seconds.",
 		},
+		[]string{"code", "method", "url"},
 	)
 	prometheus.MustRegister(p.reqDur)
 
-	p.reqSz = prometheus.NewSummary(
+	p.reqSz = prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
 			Subsystem: subsystem,
 			Name:      "request_size_bytes",
 			Help:      "The HTTP request sizes in bytes.",
 		},
+		[]string{"code", "method", "url"},
 	)
 	prometheus.MustRegister(p.reqSz)
 
-	p.resSz = prometheus.NewSummary(
+	p.resSz = prometheus.NewSummaryVec(
 		prometheus.SummaryOpts{
 			Subsystem: subsystem,
 			Name:      "response_size_bytes",
 			Help:      "The HTTP response sizes in bytes.",
 		},
+		[]string{"code", "method", "url"},
 	)
 	prometheus.MustRegister(p.resSz)
 }
@@ -96,10 +99,10 @@ func (p *Prometheus) handlerFunc() gin.HandlerFunc {
 		elapsed := float64(time.Since(start)) / float64(time.Second)
 		resSz := float64(c.Writer.Size())
 
-		p.reqDur.Observe(elapsed)
+		p.reqDur.WithLabelValues(status, c.Request.Method, c.FullPath()).Observe(elapsed)
 		p.reqCnt.WithLabelValues(status, c.Request.Method, c.FullPath()).Inc()
-		p.reqSz.Observe(float64(<-reqSz))
-		p.resSz.Observe(resSz)
+		p.reqSz.WithLabelValues(status, c.Request.Method, c.FullPath()).Observe(float64(<-reqSz))
+		p.resSz.WithLabelValues(status, c.Request.Method, c.FullPath()).Observe(resSz)
 	}
 }
 
